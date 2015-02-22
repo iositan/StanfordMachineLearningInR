@@ -1,0 +1,223 @@
+---
+title: "Programming Exercise 1: Linear Regression"
+author: "Machine Learning"
+geometry: margin=3cm
+header-includes:
+   - \usepackage[T1]{fontenc}
+   - \usepackage{framed}
+output: pdf_document
+numbersections: yes
+---
+
+# Introduction
+
+In this exercise, you will implement linear regression and get to see it work on data. Before starting on this programming exercise, we strongly recommend watching the video lectures and completing the review questions for the associated topics.  
+&nbsp;To get started with the exercise, you will need to download the starter code and unzip its contents to the directory where you wish to complete the exercise. If needed, use the *setwd()* command in R to change to this directory before starting this exercise or open the project Ex1.Rproj in R Studio
+
+## Files included in this exercise
+
+* ex1.R - R script that will help step you through the exercise
+* ex1_multi.R - R script for the later parts of the exercise
+* ex1data1.txt - Dataset for linear regression with one variable
+* ex1data2.txt - Dataset for linear regression with multiple variables
+* submit.R - Submission script that sends your solutions to our servers
+* [$\star$] warmUpExercise.R - Simple example function in R
+* [$\star$] plotData.R - Function to display the dataset
+* [$\star$] computeCost.R - Function to compute the cost of linear regression
+* [$\star$] gradientDescent.R - Function to run gradient descent
+* [$\dag$] computeCostMulti.R - Cost function for multiple variables
+* [$\dag$] gradientDescentMulti.R - Gradient descent for multiple variables
+* [$\dag$] featureNormalize.R - Function to normalize features
+* [$\dag$] normalEqn.R - Function to compute the normal equations
+
+$\star$ indicates you will need to complete.  
+$\dag$ indicates extra credit exercises.
+
+&nbsp;Throughout the exercise, you will be using the scripts *ex1.R* and *ex1_multi.R*.  
+&nbsp;These scripts set up the dataset for the problems and make calls to functions that you will write. You do not need to modify either of them. You are only required to modify functions in other files, by following the instructions in this assignment.  
+&nbsp;For this programming exercise, you are only required to complete the first part of the exercise to implement linear regression with one variable. The second part of the exercise, which you may complete for extra credit, covers linear regression with multiple variables.
+
+## Where to get help
+The exercises in this course use R
+
+-----
+
+# Simple R function
+The first part of *ex1.R* gives you practice with R syntax and the homework submission process. In the file warmUpExercise.R, you will find the outline of an R function. Modify it to return a 5 x 5 identity matrix by filling in the following code:
+
+```{r chunk1,eval=FALSE}
+A = diag(5);
+```
+
+When you are finished, run ex1.R (assuming you are in the correct directory, type *source("ex1.R")* at the R prompt) and you should see output similar to the following:
+
+
+```{r chunk2,echo=FALSE}
+rm(list = ls()) ; cat("\014")
+source("helper.R")
+print('Running warmUpExercise ...');
+print('5x5 Identity Matrix: ');
+source("warmUpExercise.R")
+print(warmUpExercise())
+```
+
+&nbsp;Now ex1.R will pause until you press any key, and then will run the code for the next part of the assignment. If you wish to quit, typing ctrl-c will stop the program in the middle of its run.  
+
+## Submitting Solutions
+After completing a part of the exercise, you can submit your solutions for grading by typing submit at the R command line. The submission
+script will prompt you for your username and password and ask you which
+files you want to submit. You can obtain a submission password from the
+website's "Programming Exercises" page.  
+  
+&nbsp;&nbsp;*You should now submit the warm up exercise.  *  
+  
+&nbsp;&nbsp;You are allowed to submit your solutions multiple times, and we will take only the highest score into consideration. To prevent rapid-fire guessing, the system enforces a minimum of 5 minutes between submissions.  
+
+-----
+
+#Linear regression with one variable
+In this part of this exercise, you will implement linear regression with one variable to predict profits for a food truck. Suppose you are the CEO of a restaurant franchise and are considering diferent cities for opening a new outlet. The chain already has trucks in various cities and you have data for profits and populations from the cities.  
+&nbsp;You would like to use this data to help you select which city to expand to next.
+
+
+&nbsp;The file *ex1data1.txt* contains the dataset for our linear regression problem. The first column is the population of a city and the second column is the profit of a food truck in that city. A negative value for profit indicates a loss.  
+&nbsp;The *ex1.R* script has already been set up to load this data for you.
+
+## Plotting the Data
+Before starting on any task, it is often useful to understand the data by visualizing it. For this dataset, you can use a scatter plot to visualize the data, since it has only two properties to plot (profit and population). (Many other problems that you will encounter in real life are multi-dimensional and can't be plotted on a 2-d plot.)  
+&nbsp;In *ex1.m*, the dataset is loaded from the data file into the variables X and y:
+
+```{r chunk4, eval=FALSE}
+data <- read.csv('ex1data1.txt', header=FALSE);
+X <- data[, 1]; y <- data[, 2];
+m <- length(y); # number of training examples
+```
+
+Next, the script calls the plotData function to create a scatter plot of
+the data. Your job is to complete plotData.R to draw the plot; modify the file and fill in the following code:
+
+```{r chunk5, eval=FALSE}
+  plot(X, y, type="p",  pch=4, col="red",
+       xlab = 'Population of City in 10,000s',
+       ylab = 'Profit in $10,000s', cex=0.9);
+```
+
+&nbsp;Now, when you continue to run ex1.m, our end result should look like Figure 1, with the same red "x" markers and axis labels.  
+&nbsp;To learn more about the plot command, you can type help plot at the R command prompt or to search online for plotting documentation. (To
+change the markers to red "x", we used the option col="red' together with the plot command.  
+
+```{r chunk6, echo=FALSE}
+print('Plotting Data ...')
+data <- read.csv('ex1data1.txt', header=FALSE);
+X <- data[, 1]; y <- data[, 2];
+m <- length(y); # number of training examples
+
+# Plot Data
+# Note: You have to complete the code in plotData.R
+source("plotData.R")
+a <- plotData(X, y);
+```
+![Figure 1: Scatter plot of training data]
+
+## Gradient Descent
+In this part, you will fit the linear regression parameters $\theta$ to our dataset using gradient descent.
+
+### Update Equations
+The objective of linear regression is to minimize the cost function  
+$$ J(\theta) = \frac{1}{2m}\sum_{1=1}^{m} (h_{\theta}(x^{(i)})-y^{(i)})^2$$
+where the hypotesis $h_{\theta}(x)$ is given by the linear model
+$$h_{\theta}(x) = \theta^{T}x = \theta_{0} + \theta_{1}x_{1}$$
+
+&nbsp;Recall that the parameters of your model are the $\theta_{j}$ values. These are the values you will adjust to minimize cost $J(\theta)$. One way to do this is to use the batch gradient descent algorithm. In batch gradient descent, each iteration performs the update
+$$\theta_{j} := \theta_{j} - \alpha \frac{1}{m}\sum_{1=1}^{m} (h_{\theta}(x^{(i)})-y^{(i)})x_{j}^{(i)}(\ simultaneously\ update\ \theta_{j}\ for\ all\ j).$$
+
+&nbsp;With each step of gradient descent, your parameters $\theta_{j}$ come closer to the optimal values that will achieve the lowest cost $J(\theta)$.
+
+\begin{framed}
+
+\textbf{Implementation Note}: We store each example as a row in the the X
+matrix in R. To take into account the intercept term $(\theta_{0})$, we add an additional first column to X and set it to all ones. This allows us to treat $(\theta_{0})$ as simply another 'feature'.
+Something
+\end{framed}
+
+### Implementation
+
+
+In *ex1.R*, we have already set up the data for linear regression. In the
+following lines, we add another dimension to our data to accommodate the
+$\theta_{0}$ intercept term. We also initialize the initial parameters to 0 and the
+learning rate alpha to 0.01.
+```{r chunk8, eval=FALSE}
+X = cbind(rep(1,m) , data[,1]); # Add a column of ones to x
+theta = rep(0,2); # initialize fitting parameters
+
+# Some gradient descent settings
+iterations <-1500;
+alpha <-  0.01;
+```
+
+### Computing the cost $J(\theta)$
+
+As you perform gradient descent to learn minimize the cost function $J(\theta)$,
+it is helpful to monitor the convergence by computing the cost. In this section, you will implement a function to calculate $J(\theta)$ so you can check the convergence of your gradient descent implementation.   
+&nbsp;Your next task is to complete the code in the file *computeCost.R,* which
+is a function that computes $J(\theta)$. As you are doing this, remember that the
+variables X and y are not scalar values, but matrices whose rows represent the examples from the training set.   
+&nbsp;Once you have completed the function, the next step in *ex1.R* will run
+computeCost once using $\theta$ initialized to zeros, and you will see the cost
+printed to the screen.   
+&nbsp;You should expect to see a cost of 32.07.
+
+## Normal Equations
+In the lecture videos, you learned that the closed-form solution to linear
+regression is
+
+$$\theta = (X^{T}X)^{-1}X^{T}y$$
+
+&nbsp;Using this formula does not require any feature scaling, and you will get
+an exact solution in one calculation: there is no "loop until convergence" like
+in gradient descent.
+
+&nbsp;Complete the code in **normalEqn.R** to use the formula above to calculate $\theta$. Remember that while you don't need to scale your features, we still
+need to add a column of 1's to the X matrix to have an intercept term $(\theta_{0})$.  
+The code in **ex1.R** will add the column of 1's to X for you.
+
+&nbsp;*You should now submit the normal equations function*
+
+&nbsp;*Optional (ungraded) exercise:* Now, once you have found $\theta$ using this
+method, use it to make a price prediction for a 1650-square-foot house with
+3 bedrooms. You should nd that gives the same predicted price as the value
+you obtained using the model t with gradient descent (in Section 3.2.1)
+
+#Submission and Grading
+
+After completing various parts of the assignment, be sure to use the submit
+function system to submit your solutions to our servers. The following is a
+breakdown of how each part of this exercise is scored.
+
+\begin{tabular}{ l | l | l}
+\textbf{Part}  & \textbf{Submitted File}  & \textbf{Points} \\
+\hline
+Warm up exercise &  \textbf{warmUpExercise.R}  & 10 points \\
+\hline
+Compute cost for one variable & \textbf{computeCost.R} & 40 points \\
+Gradient descent for one variable & \textbf{gradientDescent.R} &  50 points \\
+\hline
+Total Points & & 100 points \\
+\hline
+\end{tabular}
+
+**Extra Credit Exercises (optional)**
+\begin{tabular}{l|l|l}
+\hline
+Feature normalization & \textbf{featureNormalize.R} & 10 points \\
+Compute cost for multiple variables & \textbf{computeCostMulti.R} &  15 points \\
+Gradient descent for multiple variables & \textbf{gradientDescentMulti.R}  & 15 points \\
+\hline
+Normal Equations & \textbf{normalEqn.R}  & 10 points \\
+\hline
+\end{tabular}
+
+&nbsp;You are allowed to submit your solutions multiple times, and we will take
+only the highest score into consideration. To prevent rapid-fire guessing, the
+system enforces a minimum of 5 minutes between submissions.
